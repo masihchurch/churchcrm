@@ -213,6 +213,48 @@ function initializeApp() {
   initializeFAB();
 }
 
+/**
+ * Close the mobile sidebar (#sidebar-menu collapse) when the user picks an
+ * item from it or from a topbar dropdown (account, support, cart) — on small
+ * screens those dropdowns render directly below the expanded sidebar, so it
+ * would otherwise stay open over modals, AJAX actions, and back-navigation.
+ */
+(() => {
+  const sidebarMenu = document.getElementById("sidebar-menu");
+  if (!sidebarMenu) return;
+
+  const hideSidebar = () => {
+    if (!sidebarMenu.classList.contains("show")) return;
+    if (window.bootstrap?.Collapse) {
+      window.bootstrap.Collapse.getOrCreateInstance(sidebarMenu, { toggle: false }).hide();
+    } else {
+      sidebarMenu.classList.remove("show");
+    }
+  };
+
+  document.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target || !sidebarMenu.classList.contains("show")) return;
+
+    const topbarItem = target.closest("header.navbar .dropdown-item");
+    const sidebarLink = target.closest("#sidebar-menu a[href]:not([data-bs-toggle])");
+    if (topbarItem || sidebarLink) {
+      hideSidebar();
+    }
+  });
+
+  // Restored from back/forward cache with the sidebar still expanded
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted && sidebarMenu.classList.contains("show")) {
+      sidebarMenu.classList.remove("show");
+      document.querySelectorAll('[data-bs-target="#sidebar-menu"]').forEach((toggler) => {
+        toggler.classList.add("collapsed");
+        toggler.setAttribute("aria-expanded", "false");
+      });
+    }
+  });
+})();
+
 // Helper function to run initialization code after locales are loaded
 // Usage: window.CRM.onLocalesReady(function() { /* your init code */ });
 window.CRM.onLocalesReady = (callback) => {
